@@ -22,25 +22,26 @@ app.get('/get-cloudflare-data', async (req, res) => {
   const zoneTag = process.env.ZONE_TAG; 
 
   const query = `
-    query {
-      viewer {
-        zones(filter: {zoneTag: "${zoneTag}"}) {
-          httpRequests1dGroups(limit: 1, filter: {date_gt: "2025-03-22"}) {
-            sum {
-              requests
-              bytes
-              cachedRequests
-              cachedBytes
-              threats
-            }
-            dimensions {
-              date
-            }
+  query {
+    viewer {
+      zones(filter: {zoneTag: "${zoneTag}"}) {
+        httpRequests1dGroups(limit: 1) {
+          sum {
+            requests
+            bytes
+            cachedRequests
+            cachedBytes
+            threats
+          }
+          dimensions {
+            date
           }
         }
       }
     }
-  `;
+  }
+`;
+
 
   try {
     const response = await fetch(url, {
