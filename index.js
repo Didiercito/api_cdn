@@ -25,7 +25,7 @@ app.get('/get-cloudflare-data', async (req, res) => {
   query {
     viewer {
       zones(filter: {zoneTag: "${zoneTag}"}) {
-        httpRequests1dGroups(limit: 1) {
+        httpRequests1dGroups(limit: 7) {  
           sum {
             requests
             bytes
@@ -40,7 +40,8 @@ app.get('/get-cloudflare-data', async (req, res) => {
       }
     }
   }
-`;
+  `;
+  
 
 
   try {
