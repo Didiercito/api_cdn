@@ -25,21 +25,44 @@ app.get('/get-cloudflare-data', async (req, res) => {
     return res.status(500).json({ error: "Faltan las credenciales de Cloudflare en las variables de entorno." });
   }
 
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const formattedDate = yesterday.toISOString().split('T')[0];
-
   const query = `
     query {
       viewer {
         zones(filter: {zoneTag: "${zoneTag}"}) {
-          httpRequests1dGroups(limit: 1, filter: {date_gt: "${formattedDate}"}) {
+          # 🔹 HTTP Traffic, Security y Performance
+          httpRequests1dGroups(limit: 7) {
             sum {
               requests
               bytes
               cachedRequests
               cachedBytes
               threats
+            }
+            dimensions {
+              date
+            }
+          }
+
+          # 🔹 DNS Analytics
+          dnsAnalyticsGroups(limit: 7) {
+            sum {
+              queries
+              responseCodes {
+                name
+                count
+              }
+            }
+            dimensions {
+              date
+            }
+          }
+          
+          # 🔹 Performance Metrics (Web Vitals)
+          webVitalsTimeseries(limit: 7) {
+            sum {
+              firstContentfulPaint
+              firstInputDelay
+              cumulativeLayoutShift
             }
             dimensions {
               date
@@ -66,21 +89,36 @@ app.get('/get-cloudflare-data', async (req, res) => {
       return res.status(500).json({ error: 'Error en la consulta de Cloudflare', details: data.errors });
     }
 
-    const zoneData = data?.data?.viewer?.zones[0]?.httpRequests1dGroups?.[0];
+    const zoneData = data?.data?.viewer?.zones?.[0];
+    
     if (!zoneData) {
       return res.status(500).json({ error: "No se encontraron datos en la respuesta de Cloudflare." });
     }
 
-    const result = {
-      date: zoneData.dimensions.date,
-      requests: zoneData.sum.requests || 0,
-      bytes: zoneData.sum.bytes || 0,
-      cachedRequests: zoneData.sum.cachedRequests || 0,
-      cachedBytes: zoneData.sum.cachedBytes || 0,
-      threats: zoneData.sum.threats || 0
-    };
+    const httpRequests = zoneData.httpRequests1dGroups?.map(entry => ({
+      date: entry.dimensions.date,
+      requests: entry.sum.requests || 0,
+      bytes: entry.sum.bytes || 0,
+      cachedRequests: entry.sum.cachedRequests || 0,
+      cachedBytes: entry.sum.cachedBytes || 0,
+      threats: entry.sum.threats || 0
+    })) || [];
 
-    res.json(result);
+    const dnsAnalytics = zoneData.dnsAnalyticsGroups?.map(entry => ({
+      date: entry.dimensions.date,
+      queries: entry.sum.queries || 0,
+      responseCodes: entry.sum.responseCodes || []
+    })) || [];
+
+    const webVitals = zoneData.webVitalsTimeseries?.map(entry => ({
+      date: entry.dimensions.date,
+      firstContentfulPaint: entry.sum.firstContentfulPaint || 0,
+      firstInputDelay: entry.sum.firstInputDelay || 0,
+      cumulativeLayoutShift: entry.sum.cumulativeLayoutShift || 0
+    })) || [];
+
+    res.json({ httpRequests, dnsAnalytics, webVitals });
+
   } catch (error) {
     console.error('Error al obtener datos de Cloudflare:', error);
     res.status(500).json({ error: 'Error en el servidor al consultar Cloudflare' });
