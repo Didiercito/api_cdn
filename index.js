@@ -7,7 +7,7 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors({ origin: '*' }));
+app.use(cors({ origin: 'https://blog.margaritaydidi.xyz' }));
 
 app.get('/get-cloudflare-data', async (req, res) => {
   const url = "https://api.cloudflare.com/client/v4/graphql";
